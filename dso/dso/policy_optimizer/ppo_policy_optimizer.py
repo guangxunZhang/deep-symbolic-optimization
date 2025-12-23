@@ -1,5 +1,7 @@
+from __future__ import annotations
 
 import tensorflow as tf
+tf.compat.v1.disable_v2_behavior()
 import numpy as np
 from dso.policy_optimizer import PolicyOptimizer
 from dso.policy import Policy
@@ -22,7 +24,7 @@ class PPOPolicyOptimizer(PolicyOptimizer):
         
     """
     def __init__(self, 
-            sess : tf.Session,
+            sess : "tf.compat.v1.Session",
             policy : Policy,
             debug : int = 0, 
             summary : bool = False,
@@ -48,7 +50,7 @@ class PPOPolicyOptimizer(PolicyOptimizer):
             # Retrieve rewards from batch
             r = self.sampled_batch_ph.rewards
 
-            self.old_neglogp_ph = tf.placeholder(dtype=tf.float32, 
+            self.old_neglogp_ph = tf.compat.v1.placeholder(dtype=tf.float32, 
                                     shape=(None,), name="old_neglogp")
             ratio = tf.exp(self.old_neglogp_ph - self.neglogp)
             clipped_ratio = tf.clip_by_value(ratio, 1. - self.ppo_clip_ratio,

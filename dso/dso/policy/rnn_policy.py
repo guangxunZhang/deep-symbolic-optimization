@@ -1,5 +1,7 @@
 """Controller used to generate distribution over hierarchical, variable-length objects."""
 import tensorflow as tf
+# Enable TensorFlow 1.x compatibility mode for TF 2.x
+tf.compat.v1.disable_v2_behavior()
 import numpy as np
 
 from dso.program import Program
@@ -9,7 +11,7 @@ from dso.memory import Batch
 from dso.policy import Policy
 from dso.utils import make_batch_ph
 
-class LinearWrapper(tf.contrib.rnn.LayerRNNCell):
+class LinearWrapper(tf.compat.v1.nn.rnn_cell.RNNCell):
     """RNNCell wrapper that adds a linear layer to the output.
 
     See: https://github.com/tensorflow/models/blob/master/research/brain_coder/single_task/pg_agent.py
@@ -20,9 +22,9 @@ class LinearWrapper(tf.contrib.rnn.LayerRNNCell):
         self._output_size = output_size
 
     def __call__(self, inputs, state, scope=None):
-        with tf.variable_scope(type(self).__name__):
+        with tf.compat.v1.variable_scope(type(self).__name__):
             outputs, state = self.cell(inputs, state, scope=scope)
-            logits = tf.layers.dense(outputs, units=self._output_size)
+            logits = tf.compat.v1.layers.dense(outputs, units=self._output_size)
 
         return logits, state
 
@@ -100,7 +102,7 @@ class RNNPolicy(Policy):
         self.n_choices = Program.library.L
 
         # Placeholders, computed after instantiating expressions
-        self.batch_size = tf.placeholder(dtype=tf.int32, shape=(), name="batch_size")
+        self.batch_size = tf.compat.v1.placeholder(dtype=tf.int32, shape=(), name="batch_size")
 
         # setup model
         self._setup_tf_model(cell, num_layers, num_units, initializer)
@@ -123,28 +125,28 @@ class RNNPolicy(Policy):
         max_length = self.max_length
 
         # Build RNN policy
-        with tf.name_scope("controller"):
+        with tf.compat.v1.name_scope("controller"):
 
             def make_initializer(name):
                 if name == "zeros":
-                    return tf.zeros_initializer()
+                    return tf.compat.v1.zeros_initializer()
                 if name == "var_scale":
-                    return tf.contrib.layers.variance_scaling_initializer(
+                    return tf.compat.v1.variance_scaling_initializer(
                             factor=0.5, mode='FAN_AVG', uniform=True, seed=0)
                 raise ValueError("Did not recognize initializer '{}'".format(name))
 
             def make_cell(name, num_units, initializer):
                 if name == 'lstm':
-                    return tf.nn.rnn_cell.LSTMCell(num_units, initializer=initializer)
+                    return tf.compat.v1.nn.rnn_cell.LSTMCell(num_units, initializer=initializer)
                 if name == 'gru':
-                    return tf.nn.rnn_cell.GRUCell(num_units, kernel_initializer=initializer, bias_initializer=initializer)
+                    return tf.compat.v1.nn.rnn_cell.GRUCell(num_units, kernel_initializer=initializer, bias_initializer=initializer)
                 raise ValueError("Did not recognize cell type '{}'".format(name))
 
             # Create recurrent cell
             if isinstance(num_units, int):
                 num_units = [num_units] * num_layers
             initializer = make_initializer(initializer)
-            cell = tf.contrib.rnn.MultiRNNCell(
+            cell = tf.compat.v1.nn.rnn_cell.MultiRNNCell(
                     [make_cell(cell, n, initializer=initializer) for n in num_units])
             cell = LinearWrapper(cell=cell, output_size=n_choices)
 
@@ -199,7 +201,7 @@ class RNNPolicy(Policy):
                     actions = tf.transpose(next_actions_ta.stack())  # Shape: (?, time)
 
                     # Compute obs and prior
-                    next_obs, next_prior, next_finished = tf.py_func(func=task.get_next_obs,
+                    next_obs, next_prior, next_finished = tf.compat.v1.py_func(func=task.get_next_obs,
                                                                      inp=[actions, obs, finished],
                                                                      Tout=[tf.float32, tf.float32, tf.bool])
                     next_prior.set_shape([None, n_choices])
@@ -222,8 +224,8 @@ class RNNPolicy(Policy):
                 return (finished, next_input, next_cell_state, emit_output, next_loop_state)
 
             # Returns RNN emit outputs TensorArray (i.e. logits), final cell state, and final loop state
-            with tf.variable_scope('policy'):
-                _, _, loop_state = tf.nn.raw_rnn(cell=cell, loop_fn=loop_fn)
+            with tf.compat.v1.variable_scope('policy'):
+                _, _, loop_state = tf.compat.v1.nn.raw_rnn(cell=cell, loop_fn=loop_fn)
                 actions_ta, obs_ta, priors_ta, _, _, _ = loop_state
 
             self.actions = tf.transpose(actions_ta.stack(), perm=[1, 0]) # (?, max_length)
@@ -254,8 +256,8 @@ class RNNPolicy(Policy):
             entropy_gamma = 1.0
         entropy_gamma_decay = np.array([entropy_gamma**t for t in range(self.max_length)], dtype=np.float32)
 
-        with tf.variable_scope('policy', reuse=True):
-            logits, _ = tf.nn.dynamic_rnn(cell=self.cell,
+        with tf.compat.v1.variable_scope('policy', reuse=True):
+            logits, _ = tf.compat.v1.nn.dynamic_rnn(cell=self.cell,
                                           inputs=self.state_manager.get_tensor_input(B.obs),
                                           sequence_length=B.lengths, # Backpropagates only through sequence length
                                           dtype=tf.float32)

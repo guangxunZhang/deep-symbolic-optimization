@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 from typing import Tuple, TypeVar
 
 import tensorflow as tf
+# Enable TensorFlow 1.x compatibility mode for TF 2.x
+tf.compat.v1.disable_v2_behavior()
 import dso
 from dso.prior import LengthConstraint
 from dso.program import Program
@@ -44,7 +48,7 @@ class Policy(ABC):
     """    
 
     def __init__(self, 
-            sess : tf.Session,
+            sess : "tf.compat.v1.Session",
             prior : JointPrior,
             state_manager : StateManager,
             debug : int = 0,  

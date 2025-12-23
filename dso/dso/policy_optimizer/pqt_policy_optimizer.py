@@ -1,5 +1,7 @@
+from __future__ import annotations
 
 import tensorflow as tf
+tf.compat.v1.disable_v2_behavior()
 from dso.policy_optimizer import PolicyOptimizer
 from dso.policy import Policy
 from dso.utils import make_batch_ph
@@ -23,7 +25,7 @@ class PQTPolicyOptimizer(PolicyOptimizer):
         
     """
     def __init__(self, 
-            sess : tf.Session,
+            sess : "tf.compat.v1.Session",
             policy : Policy,
             debug : int = 0, 
             summary : bool = False,

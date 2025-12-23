@@ -9,7 +9,7 @@ from datetime import datetime
 
 import click
 
-from dso import DeepSymbolicOptimizer
+from dso.core import DeepSymbolicOptimizer
 from dso.logeval import LogEval
 from dso.config import load_config
 from dso.utils import safe_update_summary

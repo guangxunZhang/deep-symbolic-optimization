@@ -1,7 +1,10 @@
 """Model architecture of default (saved) LanguageModel"""
 
 import tensorflow as tf
-from tensorflow.contrib import rnn
+# Enable TensorFlow 1.x compatibility mode for TF 2.x
+tf.compat.v1.disable_v2_behavior()
+# Use compat.v1.nn.rnn_cell instead of tensorflow.contrib.rnn
+from tensorflow.compat.v1.nn import rnn_cell
 
 class LanguageModel(object):
     def __init__(self, vocabulary_size, embedding_size, num_layers, num_hidden, mode='train'):
@@ -31,11 +34,11 @@ class LanguageModel(object):
 
         with tf.compat.v1.variable_scope("rnn"):
             def make_cell():
-                cell = rnn.BasicRNNCell(self.num_hidden)
-                cell = rnn.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
+                cell = rnn_cell.BasicRNNCell(self.num_hidden)
+                cell = rnn_cell.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
                 return cell
 
-            cell = rnn.MultiRNNCell([make_cell() for _ in range(self.num_layers)])
+            cell = rnn_cell.MultiRNNCell([make_cell() for _ in range(self.num_layers)])
 
             self.initial_state = cell.zero_state(self.batch_size, dtype=tf.float32)
 
@@ -57,7 +60,8 @@ class LanguageModel(object):
             elif mode == "predict":
                 target = self.x[:, :]
 
-            self.loss = tf.contrib.seq2seq.sequence_loss(
+            # Use compat.v1.nn.sequence_loss instead of tf.contrib.seq2seq.sequence_loss
+            self.loss = tf.compat.v1.nn.sequence_loss(
                 logits=self.logits,
                 targets=target,
                 weights=tf.sequence_mask(self.seq_len, tf.shape(self.x)[1] - 2, dtype=tf.float32),
